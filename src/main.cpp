@@ -12,15 +12,26 @@
 #include "config.h"
 #include <DHT.h>
 #include <Wire.h>
-#define ARDUINOTRACE_ENABLE 1 // zodat we de debugging kunnen aanzetten (1) of afzetten (0)
+#define ARDUINOTRACE_ENABLE 0
+ // zodat we de debugging kunnen aanzetten (1) of afzetten (0)
 #include <ArduinoTrace.h>
 
 // TODO: Definieer juiste pinnummers voor sensoren
 #define DHTPIN 14 // Pas aan naar de juiste pin voor de DHT sensor
 #define DHTTYPE DHT22 // Of DHT11, afhankelijk van je sensor
 DHT dht(DHTPIN, DHTTYPE);
-#define RESISTIEVE_BVH_PIN 12
-#define CAPACITIEVE_BVH_PIN 1
+#define RESISTIEVE_BVH_PIN 34
+#define CAPACITIEVE_BVH_PIN 39
+
+String categorieNaarString(VochtCategorie categorie) {
+  switch (categorie) {
+    case UITGEDROOGD: return "UITGEDROOGD";
+    case LICHT_VOCHTIG: return "LICHT_VOCHTIG";
+    case DOORNAT: return "DOORNAT";
+    default: return "ONBEKEND";
+  }
+}
+
 
 float tempGlobal = 0; // Globale temperatuur variabele
 
@@ -38,23 +49,43 @@ float tempGlobal = 0; // Globale temperatuur variabele
 float leesTemperatuur() {
   // TODO: Implementeer zodat de temperatuur op de juiste manier wordt ingelezen
   float temp = dht.readTemperature();
+
   return temp;
 }
 
 /**
  * Bepaal de juiste sensorwaarde voor de capacitieve bodemvochtigheidssensor.
  */
-int leesCapacitieveBVHSensor() {
+VochtCategorie berekenCategorieCapactieveBHV(int capacitieve_bvh_waarde) {
   // TODO: Implementeer inlezen met correcte pinnen
-  return 0;
+  if (capacitieve_bvh_waarde <= CAPACITIEVE_SENSOR_DROOG_INTERVAL_MIN && capacitieve_bvh_waarde >= CAPACITIEVE_SENSOR_DROOG_INTERVAL_MAX) {
+    DUMP(UITGEDROOGD);
+    return VochtCategorie::UITGEDROOGD;
+  } else if (capacitieve_bvh_waarde <= CAPACITIEVE_SENSOR_VOCHTIG_INTERVAL_MIN && capacitieve_bvh_waarde >= CAPACITIEVE_SENSOR_VOCHTIG_INTERVAL_MAX) {
+    DUMP(LICHT_VOCHTIG);
+    return VochtCategorie::LICHT_VOCHTIG;
+  } else {
+    DUMP(DOORNAT);
+    return VochtCategorie::DOORNAT;
+  }
 }
 
 /**
  * Bepaal de juiste sensorwaarde voor de resistieve bodemvochtigheidssensor.
  */
-int leesResistieveBVHSensor() {
+VochtCategorie berekenCategorieResistieveBVH(int resistieve_bvh_waarde) {
+
   // TODO: Implementeer inlezen met correcte pinnen
-  return 0;
+  if (resistieve_bvh_waarde >= RESISTIEVE_SENSOR_DROOG_INTERVAL_MIN && resistieve_bvh_waarde <= RESISTIEVE_SENSOR_DROOG_INTERVAL_MAX) {
+      DUMP(UITGEDROOGD);
+      return VochtCategorie::UITGEDROOGD;
+    } else if (resistieve_bvh_waarde >= RESISTIEVE_SENSOR_VOCHTIG_INTERVAL_MIN && resistieve_bvh_waarde <= RESISTIEVE_SENSOR_VOCHTIG_INTERVAL_MAX) {
+      DUMP(LICHT_VOCHTIG);
+      return VochtCategorie::LICHT_VOCHTIG;
+    } else {
+      DUMP(DOORNAT);
+      return VochtCategorie::DOORNAT;
+    }
 }
 
 /* MOCK functies om sensoren te bypassen */
@@ -80,10 +111,6 @@ int leesResistieveBVHSensor_MOCK() {
  * Opgelet!!  Gebruik enkel de categoriën uit je configuratiebestand!
  * Pas het type van de return value in het functievoorschrift aan op basis van je configuratiebestand.
  */
-String berekenCategorieCapactieveBHV(int sensorwaarde) {
-  // TODO: Implementeer zodat de categorie voor de capacitieve BVH sensor wordt berekend.
-  return "";
-}
 
 /**
  * Bepaal de categorie van de resistieve bodemvochtigheidssensor voor de gemeten sensorwaarde.
@@ -92,10 +119,7 @@ String berekenCategorieCapactieveBHV(int sensorwaarde) {
  * Opgelet!!  Gebruik enkel de categoriën uit je configuratiebestand!
  * Pas het type van de return value in het functievoorschrift aan op basis van je configuratiebestand.
  */
-String berekenCategorieResistieveBVH(int sensorwaarde) {
-  // TODO: Implementeer zodat de categorie voor de resistieve BVH sensor wordt berekend.
-  return "";
-}
+
 
 /**
  * Bereken de samengestelde categorie voor beide bodemvochtigheidssensoren.
@@ -103,9 +127,15 @@ String berekenCategorieResistieveBVH(int sensorwaarde) {
  * Opgelet!!  Gebruik enkel de categoriën uit je configuratiebestand!
  * Pas het type van de return value in het functievoorschrift aan op basis van je configuratiebestand.
  */
-String berekenSamengesteldeCategorie(String categorieResistieveBVH, String categorieCapacitieveBVH) {
+VochtCategorie berekenSamengesteldeCategorie(VochtCategorie categorieResistieveBVH, VochtCategorie categorieCapacitieveBVH) {
   // Todo: Implementeer zodat een samengstelde categorie wordt berekend.  Documenteer de strategie!
-  return "";
+  if (categorieResistieveBVH == VochtCategorie::UITGEDROOGD || categorieCapacitieveBVH == VochtCategorie::UITGEDROOGD) {
+    return VochtCategorie::UITGEDROOGD;
+  } else if (categorieResistieveBVH == VochtCategorie::LICHT_VOCHTIG || categorieCapacitieveBVH == VochtCategorie::LICHT_VOCHTIG) {
+    return VochtCategorie::LICHT_VOCHTIG;
+  } else {
+    return VochtCategorie::DOORNAT;
+  }
 }
 
 /**
@@ -139,14 +169,19 @@ void zetWaterpompUit() {
  */
 void leesSensorenEnGeefWaterIndienNodig() {
   // TODO: Implementeer inlezen met correcte pinnen
-  int capacitieve_bvh_waarde = leesCapacitieveBVHSensor();
-  int resistieve_bvh_waarde = leesResistieveBVHSensor();
+  int capacitieve_bvh_waarde = analogRead(CAPACITIEVE_BVH_PIN);
+  int resistieve_bvh_waarde = analogRead(RESISTIEVE_BVH_PIN);
   int temperatuur = leesTemperatuur();
 
   // Bepaal individuele categoriën en samengestelde categorie
-  String categorieCapacitieveBVH = berekenCategorieCapactieveBHV(capacitieve_bvh_waarde);
-  String categorieResistieveBVH = berekenCategorieResistieveBVH(resistieve_bvh_waarde);
-  String categorie = berekenSamengesteldeCategorie(categorieCapacitieveBVH, categorieResistieveBVH);
+  VochtCategorie categorieCapacitieveBVH = berekenCategorieCapactieveBHV(capacitieve_bvh_waarde);
+  VochtCategorie categorieResistieveBVH = berekenCategorieResistieveBVH(resistieve_bvh_waarde);
+  VochtCategorie categorie = berekenSamengesteldeCategorie(categorieCapacitieveBVH, categorieResistieveBVH);
+
+Serial.print("Capacitieve BVH: ");
+Serial.println(capacitieve_bvh_waarde);
+Serial.print("Resistieve BVH: ");
+Serial.println(resistieve_bvh_waarde);
 
   // TODO: Beslis over water geven en pas de controles toe uit de flowchart.  
   // !! Gebruik enkel de constanten uit de configuratie om met een categorie te vergelijken!
@@ -165,8 +200,9 @@ void loop() {
   // We hebben huidige millis nodig om de verschillende processen te controleren (water geven / stoppen)
   long huidigeMillis = millis();
   tempGlobal = leesTemperatuur();
-  DUMP(tempGlobal);
-  
+  //DUMP(tempGlobal);
+  leesSensorenEnGeefWaterIndienNodig();
+  delay(1000); // Wacht even voor nieuwe meting
   // TODO: Controleer of de waterpomp uitgezet moet worden en roep functie zetWaterpompUit() aan indien nodig
 
   // TODO: Controleer of sensoren ingelezen moeten worden en roep functie leesSensorenEnGeefWaterIndienNodig() aan indien nodig
