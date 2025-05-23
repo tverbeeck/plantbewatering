@@ -1,0 +1,31 @@
+#include "DHT.h"
+
+#define DHTPIN 14      // Pas dit aan naar jouw pin
+#define DHTTYPE DHT22  // Of DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+
+#define RESISTIEVE_BVH_PIN 12
+#define CAPACITIEVE_BVH_PIN 1
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+}
+
+void loop() {
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+
+  if (isnan(t) || isnan(h)) {
+    Serial.println("Kan geen data van DHT-sensor lezen");
+  } else {
+    Serial.print("Temperatuur: ");
+    Serial.print(t);
+    Serial.print(" °C, Vochtigheid: ");
+    Serial.print(h);
+    Serial.println(" %");
+  }
+
+  delay(2000); // Wacht even voor nieuwe meting
+}

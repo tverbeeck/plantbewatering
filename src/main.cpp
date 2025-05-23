@@ -1,7 +1,28 @@
+/**
+ * Hier alle bronnen : 
+ * https://www.instructables.com/How-to-use-DHT-22-sensor-Arduino-Tutorial/ 
+ * https://elektronicavoorjou.nl/project/arduino-temp-luchtvochtigheid-dht22-iot-cloud/ 
+ * erna ergens : 
+ * Ook, waarom accelerometer (bv als plant wordt omver geduwd sat watertoevoer stopt)
+ * Waarom DHT 22 gekozen
+ * Hoe bereken je de samengestelde categorieën (2 bodemvochtigheidssensoren : bv 1 priotair nemen (DROOG bv altijd eerste prioritair))
+ */
+
 #include "Arduino.h"
 #include "config.h"
+#include <DHT.h>
+#include <Wire.h>
+#define ARDUINOTRACE_ENABLE 1 // zodat we de debugging kunnen aanzetten (1) of afzetten (0)
+#include <ArduinoTrace.h>
 
 // TODO: Definieer juiste pinnummers voor sensoren
+#define DHTPIN 14 // Pas aan naar de juiste pin voor de DHT sensor
+#define DHTTYPE DHT22 // Of DHT11, afhankelijk van je sensor
+DHT dht(DHTPIN, DHTTYPE);
+#define RESISTIEVE_BVH_PIN 12
+#define CAPACITIEVE_BVH_PIN 1
+
+float tempGlobal = 0; // Globale temperatuur variabele
 
 // TODO: Variabelen om wachttijd tussen inlezen sensoren te kunnen regelen
 
@@ -14,9 +35,10 @@
  * Voor een digitale sensor zal dit anders zijn dan voor een analoge.
  * Geeft de temperatuur in °C terug.
  */
-int leesTemperatuur() {
+float leesTemperatuur() {
   // TODO: Implementeer zodat de temperatuur op de juiste manier wordt ingelezen
-  return 0;
+  float temp = dht.readTemperature();
+  return temp;
 }
 
 /**
@@ -135,12 +157,15 @@ void leesSensorenEnGeefWaterIndienNodig() {
 
 void setup() {
   // TODO: Implementeer de nodig code voor lezen sensoren (indien nodig)
-
+  Serial.begin(115200); // 9600 als baudrate lukt niet, want dan krijg ik rare tekens
+  dht.begin();
 }
 
 void loop() {
   // We hebben huidige millis nodig om de verschillende processen te controleren (water geven / stoppen)
   long huidigeMillis = millis();
+  tempGlobal = leesTemperatuur();
+  DUMP(tempGlobal);
   
   // TODO: Controleer of de waterpomp uitgezet moet worden en roep functie zetWaterpompUit() aan indien nodig
 
