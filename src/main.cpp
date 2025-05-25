@@ -17,6 +17,11 @@
 #define ARDUINOTRACE_ENABLE 1 // Zet deze op 1 om debugging aan te zetten, op 0 om debugging uit te zetten
 #include <ArduinoTrace.h>
 
+
+// Enum voor status van de waterpomp (blijft hier gedefinieerd)
+enum StatusWaterpomp { STATUS_POMP_UIT, STATUS_POMP_AAN };
+StatusWaterpomp statusWaterpomp = StatusWaterpomp::STATUS_POMP_UIT;
+
 // Globale variabelen
 unsigned long vorigeInleesMillis = 0;
 
@@ -27,6 +32,9 @@ DHT dht(DHTPIN, DHTTYPE);
 
 #define RESISTIEVE_BVH_PIN 34  // A0 is GPIO36, maar GPIO34 is betrouwbaarder voor analogRead
 #define CAPACITIEVE_BVH_PIN 39
+
+#define pompPin 25 // Pin voor de waterpomp relais
+
 
 String categorieNaarString(VochtCategorie categorie) {
   switch (categorie) {
@@ -46,6 +54,10 @@ float tempGlobal = 0; // Globale temperatuur variabele
 
 // TODO: Variabele om status van de waterpomp aan te geven, dit is nodig om te kunnen controlleren of de waterpomp gestopt moet worden
 
+// Variabelen voor het bijhouden van de starttijd en duurtijd van het water geven
+unsigned long startTijdWaterGeven = 0;
+unsigned long duurTijdWaterGeven = 0;
+
 /**
  * Bepaal de temperatuur, op basis van de gekozen temperatuursensor.
  * Voor een digitale sensor zal dit anders zijn dan voor een analoge.
@@ -60,7 +72,7 @@ float leesTemperatuur() {
 /**
  * Bepaal de juiste sensorwaarde voor de capacitieve bodemvochtigheidssensor.
  */
-VochtCategorie berekenCategorieCapactieveBHV(int capacitieve_bvh_waarde) {
+VochtCategorie berekenCategorieCapacitieveBVH(int capacitieve_bvh_waarde) {
   // TODO: Implementeer inlezen met correcte pinnen
   if (capacitieve_bvh_waarde <= CAPACITIEVE_SENSOR_DROOG_INTERVAL_MIN && capacitieve_bvh_waarde >= CAPACITIEVE_SENSOR_DROOG_INTERVAL_MAX) {
     DUMP(UITGEDROOGD);
@@ -151,9 +163,19 @@ VochtCategorie berekenSamengesteldeCategorie(VochtCategorie categorieResistieveB
  */
 void zetWaterpompAan(int duurtijd) {
   // TODO: Implementeer code om de pomp aan te zetten
+  startTijdWaterGeven = millis();
+  duurTijdWaterGeven = duurtijd;
+  digitalWrite(pompPin, HIGH); // Zet de pomp aan
+  Serial.println("Waterpomp is aangezet.");
+  statusWaterpomp = StatusWaterpomp::STATUS_POMP_AAN; // Zet de status van de waterpomp op AAN
 
-  // TODO: Initialiseer de variabelen om de starttijd en duurtijd van het water geven te regelen
- 
+
+  DUMP("Waterpomp aan, starttijd: ");
+  DUMP(startTijdWaterGeven);
+  DUMP(" Duurtijd: ");
+  DUMP(duurTijdWaterGeven);
+  DUMP(" Waterpomp status: ");
+  DUMP(statusWaterpomp);
 }
 
 /**
@@ -162,10 +184,18 @@ void zetWaterpompAan(int duurtijd) {
  *           opnieuw geïnitialiseerd moeten worden bij het uitzetten van de pomp.
  */
 void zetWaterpompUit() {
-  // TODO: Implementeer code om de pomp uit te zetten
-  
-  // TODO: Initialiseer de variabelen om de starrtijd en duurtijd van het water geven te regelen
+  digitalWrite(pompPin, LOW); // Zet de pomp uit
+  Serial.println("Waterpomp is uitgezet.");
+  statusWaterpomp = StatusWaterpomp::STATUS_POMP_UIT; // Zet de status van de waterpomp op UIT
+  startTijdWaterGeven = 0;
+  duurTijdWaterGeven = 0;
 
+  DUMP("Waterpomp uit, starttijd: ");
+  DUMP(startTijdWaterGeven);
+  DUMP(" Duurtijd: ");
+  DUMP(duurTijdWaterGeven);
+  DUMP(" Waterpomp status: ");
+  DUMP(statusWaterpomp);
 }
 
 /**
@@ -183,7 +213,7 @@ void leesSensorenEnGeefWaterIndienNodig() {
   Serial.println(temperatuur);
 
   // Bepaal individuele categoriën en samengestelde categorie
-  VochtCategorie categorieCapacitieveBVH = berekenCategorieCapactieveBHV(capacitieve_bvh_waarde);
+  VochtCategorie categorieCapacitieveBVH = berekenCategorieCapacitieveBVH(capacitieve_bvh_waarde);
   VochtCategorie categorieResistieveBVH = berekenCategorieResistieveBVH(resistieve_bvh_waarde);
   VochtCategorie categorie = berekenSamengesteldeCategorie(categorieCapacitieveBVH, categorieResistieveBVH);
 
@@ -197,25 +227,55 @@ Serial.println(resistieve_bvh_waarde);
   // !! Gebruik enkel de constanten uit de configuratie om de duurtijd van het water geven mee te geven
   // !! Gebruik verder enkel de functies zetWaterpompAan() aan te zetten
 
+  if (categorie == VochtCategorie::UITGEDROOGD) {
+    if (temperatuur < TEMPERATUUR_LAAG) {
+      Serial.println("Temperatuur is te laag, water geven wordt overgeslagen.");
+    } else if (temperatuur > TEMPERATUUR_HOOG) {
+      Serial.println("Temperatuur is hoog, extra water wordt gegeven.");
+      zetWaterpompAan(WATER_GEEF_DUUR_LANG);
+    } else {
+      zetWaterpompAan(WATER_GEEF_DUUR_NORMAAL);
+      Serial.print("Temperatuur is normaal, water wordt gegeven.");
+    }
+  }
+  
 }
 
 void setup() {
   // TODO: Implementeer de nodig code voor lezen sensoren (indien nodig)
+
+  pinMode(pompPin, OUTPUT);
+  digitalWrite(pompPin, LOW); // Zet de waterpomp uit bij opstart
+
   Serial.begin(115200); // 9600 als baudrate lukt niet, want dan krijg ik rare tekens
   dht.begin();
 }
 
 void loop() {
-  unsigned long huidigeMillis = millis();
+  // Gebruik unsigned long en lees de tijd aan het begin.
+  unsigned long huidigeMillis = millis(); 
 
-
-  if (huidigeMillis - vorigeInleesMillis >= SENSOR_INLEES_INTERVAL) {
+  // Als de pomp UIT is én het tijd is om sensoren te lezen
+  if (statusWaterpomp == StatusWaterpomp::STATUS_POMP_UIT && (huidigeMillis - vorigeInleesMillis >= SENSOR_INLEES_INTERVAL)) {
     vorigeInleesMillis = huidigeMillis;
     leesSensorenEnGeefWaterIndienNodig();
   }
 
-  // TODO: Controleer of de waterpomp uitgezet moet worden en roep functie zetWaterpompUit() aan indien nodig
+  // --- Oplossing: Haal millis() opnieuw op voor de pomp check ---
+  huidigeMillis = millis(); 
 
-  // TODO: Controleer of sensoren ingelezen moeten worden en roep functie leesSensorenEnGeefWaterIndienNodig() aan indien nodig
+  // Controleer of de waterpomp uitgezet moet worden.
+  // We printen eerst de waarden om te debuggen (optioneel).
+  if (statusWaterpomp == StatusWaterpomp::STATUS_POMP_AAN) {
 
+    // Deze berekening zal nu meestal een klein positief getal geven.
+    // De berekening (unsigned long - unsigned long) werkt correct,
+    // ook bij rollover, zolang de duur korter is dan ~49 dagen.
+    Serial.println(huidigeMillis - startTijdWaterGeven);
+
+    // De eigenlijke check om de pomp uit te zetten.
+    if ((huidigeMillis - startTijdWaterGeven) >= duurTijdWaterGeven) {
+      zetWaterpompUit(); // Zet de waterpomp uit als de tijd verstreken is
+    }
+  }
 }
