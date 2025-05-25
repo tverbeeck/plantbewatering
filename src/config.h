@@ -19,7 +19,8 @@
 
 // TODO: Wachttijd tussen 2 opeenvolgende inlezingen van sensoren
 // Planten reageren traag. Eén meting om de 5 minuten is meestal voldoende.
-const unsigned long SENSOR_INLEES_INTERVAL = 5UL * 60UL * 1000UL; // 5 minuten in milliseconden
+// const unsigned long SENSOR_INLEES_INTERVAL = 5UL * 60UL * 1000UL; // 5 minuten in milliseconden
+const unsigned long SENSOR_INLEES_INTERVAL = 15UL * 1000UL; // tijdelijk: 15s voor test
 
 
 // TODO: Temperatuur schakelwaarden
@@ -50,16 +51,16 @@ const unsigned long WATER_GEEF_DUUR_LANG  = 15UL * 1000UL;  // 15 seconden
 // Intervallen voor BVH waarden
 // Opgelet, we definiëren de intervallen als gesloten: [min, max]
 // Minimum- en maximumwaarde voor de resistieve vochtigheidssensor om de interpretatie "DROOG" te krijgen
-const int RESISTIEVE_SENSOR_DROOG_INTERVAL_MIN = 0;
-const int RESISTIEVE_SENSOR_DROOG_INTERVAL_MAX = 376;
+const int RESISTIEVE_SENSOR_UITGEDROOGD_INTERVAL_MIN = 0;
+const int RESISTIEVE_SENSOR_UITGEDROOGD_INTERVAL_MAX = 1686;
 
 // Minimum- en maximumwaarde voor de resistieve vochtigheidssensor om de interpretatie "VOCHTIG" te krijgen
-const int RESISTIEVE_SENSOR_VOCHTIG_INTERVAL_MIN = RESISTIEVE_SENSOR_DROOG_INTERVAL_MAX + 1;
-const int RESISTIEVE_SENSOR_VOCHTIG_INTERVAL_MAX = 743;
+const int RESISTIEVE_SENSOR_LICHT_VOCHTIG_INTERVAL_MIN = RESISTIEVE_SENSOR_UITGEDROOGD_INTERVAL_MAX + 1;
+const int RESISTIEVE_SENSOR_LICHT_VOCHTIG_INTERVAL_MAX = 2336;
 
 // Minimum- en maximumwaarde voor de resistieve vochtigheidssensor om de interpretatie "NAT" te krijgen
-const int RESISTIEVE_SENSOR_NAT_INTERVAL_MIN = RESISTIEVE_SENSOR_VOCHTIG_INTERVAL_MAX + 1;
-const int RESISTIEVE_SENSOR_NAT_INTERVAL_MAX = 4095; // maximum bereik met 12 bits
+const int RESISTIEVE_SENSOR_NAT_INTERVAL_MIN = RESISTIEVE_SENSOR_LICHT_VOCHTIG_INTERVAL_MAX + 1;
+const int RESISTIEVE_SENSOR_NAT_INTERVAL_MAX = 2787; // maximum bereik met 12 bits
 
 // === Intervallen bodemvochtigheidssensor — CAPACITIEF ===
 // Opgelet: bij capacitieve sensor zijn de waarden omgekeerd!
