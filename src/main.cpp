@@ -179,6 +179,9 @@ void leesSensorenEnGeefWaterIndienNodig() {
   int resistieve_bvh_waarde = analogRead(RESISTIEVE_BVH_PIN);
   int temperatuur = leesTemperatuur();
 
+  Serial.print("Temperatuur: ");
+  Serial.println(temperatuur);
+
   // Bepaal individuele categoriën en samengestelde categorie
   VochtCategorie categorieCapacitieveBVH = berekenCategorieCapactieveBHV(capacitieve_bvh_waarde);
   VochtCategorie categorieResistieveBVH = berekenCategorieResistieveBVH(resistieve_bvh_waarde);
@@ -206,9 +209,7 @@ void setup() {
 
 void loop() {
   unsigned long huidigeMillis = millis();
-  tempGlobal = leesTemperatuur();
 
-  //DUMP(tempGlobal);
 
   if (huidigeMillis - vorigeInleesMillis >= SENSOR_INLEES_INTERVAL) {
     vorigeInleesMillis = huidigeMillis;
