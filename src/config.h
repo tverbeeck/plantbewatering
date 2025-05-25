@@ -68,12 +68,12 @@ const int RESISTIEVE_SENSOR_NAT_INTERVAL_MAX = 2787; // maximum bereik met 12 bi
 // Natte grond → hogere diëlektrische constante → lagere spanning → lagere waarde
 // Dus: lagere analoge waarde = vochtiger bodem
 // Minimum- en maximumwaarde voor de capacitieve vochtigheidssensor om de interpretatie "DROOG" te krijgen
-const int CAPACITIEVE_SENSOR_DROOG_INTERVAL_MIN = 4095; // maximum bereik van 12 bits
-const int CAPACITIEVE_SENSOR_DROOG_INTERVAL_MAX = 3150;
+const int CAPACITIEVE_SENSOR_DROOG_INTERVAL_MIN = 2787; // maximum bereik van 12 bits
+const int CAPACITIEVE_SENSOR_DROOG_INTERVAL_MAX = 2120;
 
 // Minimum- en maximumwaarde voor de capacitieve vochtigheidssensor om de interpretatie "VOCHTIG" te krijgen
 const int CAPACITIEVE_SENSOR_VOCHTIG_INTERVAL_MIN = CAPACITIEVE_SENSOR_DROOG_INTERVAL_MAX - 1;
-const int CAPACITIEVE_SENSOR_VOCHTIG_INTERVAL_MAX = 1420;
+const int CAPACITIEVE_SENSOR_VOCHTIG_INTERVAL_MAX = 2521;
 
 // Minimum- en maximumwaarde voor de capacitieve vochtigheidssensor om de interpretatie "NAT" te krijgen
 const int CAPACITIEVE_SENSOR_NAT_INTERVAL_MIN = CAPACITIEVE_SENSOR_VOCHTIG_INTERVAL_MAX - 1;
