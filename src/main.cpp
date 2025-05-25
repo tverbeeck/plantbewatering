@@ -14,8 +14,7 @@
 #include "config.h"
 #include <DHT.h>
 #include <Wire.h>
-#define ARDUINOTRACE_ENABLE 0
- // zodat we de debugging kunnen aanzetten (1) of afzetten (0)
+#define ARDUINOTRACE_ENABLE 1 // Zet deze op 1 om debugging aan te zetten, op 0 om debugging uit te zetten
 #include <ArduinoTrace.h>
 
 // Globale variabelen
@@ -77,14 +76,15 @@ VochtCategorie berekenCategorieCapactieveBHV(int capacitieve_bvh_waarde) {
 
 /**
  * Bepaal de juiste sensorwaarde voor de resistieve bodemvochtigheidssensor.
+ * OPMERKING : DE GROND AANDRUKKEN
  */
 VochtCategorie berekenCategorieResistieveBVH(int resistieve_bvh_waarde) {
 
   // TODO: Implementeer inlezen met correcte pinnen
-  if (resistieve_bvh_waarde >= RESISTIEVE_SENSOR_DROOG_INTERVAL_MIN && resistieve_bvh_waarde <= RESISTIEVE_SENSOR_DROOG_INTERVAL_MAX) {
+  if (resistieve_bvh_waarde >= RESISTIEVE_SENSOR_UITGEDROOGD_INTERVAL_MIN && resistieve_bvh_waarde <= RESISTIEVE_SENSOR_UITGEDROOGD_INTERVAL_MAX) {
       DUMP(UITGEDROOGD);
       return VochtCategorie::UITGEDROOGD;
-    } else if (resistieve_bvh_waarde >= RESISTIEVE_SENSOR_VOCHTIG_INTERVAL_MIN && resistieve_bvh_waarde <= RESISTIEVE_SENSOR_VOCHTIG_INTERVAL_MAX) {
+    } else if (resistieve_bvh_waarde >= RESISTIEVE_SENSOR_LICHT_VOCHTIG_INTERVAL_MIN && resistieve_bvh_waarde <= RESISTIEVE_SENSOR_LICHT_VOCHTIG_INTERVAL_MAX) {
       DUMP(LICHT_VOCHTIG);
       return VochtCategorie::LICHT_VOCHTIG;
     } else {
@@ -191,8 +191,6 @@ Serial.print("Capacitieve BVH: ");
 Serial.println(capacitieve_bvh_waarde);
 Serial.print("Resistieve BVH: ");
 Serial.println(resistieve_bvh_waarde);
-  Serial.print("Resistieve RAW: ");
-  Serial.println(analogRead(RESISTIEVE_BVH_PIN));
 
   // TODO: Beslis over water geven en pas de controles toe uit de flowchart.  
   // !! Gebruik enkel de constanten uit de configuratie om met een categorie te vergelijken!
