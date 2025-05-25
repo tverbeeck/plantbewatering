@@ -8,6 +8,8 @@
  * Hoe bereken je de samengestelde categorieën (2 bodemvochtigheidssensoren : bv 1 priotair nemen (DROOG bv altijd eerste prioritair))
  */
 
+ // Opmerking voor mij : Ctrl + Alt + U kan ook om te herstarten
+
 #include "Arduino.h"
 #include "config.h"
 #include <DHT.h>
@@ -16,11 +18,15 @@
  // zodat we de debugging kunnen aanzetten (1) of afzetten (0)
 #include <ArduinoTrace.h>
 
+// Globale variabelen
+unsigned long vorigeInleesMillis = 0;
+
 // TODO: Definieer juiste pinnummers voor sensoren
 #define DHTPIN 14 // Pas aan naar de juiste pin voor de DHT sensor
 #define DHTTYPE DHT22 // Of DHT11, afhankelijk van je sensor
 DHT dht(DHTPIN, DHTTYPE);
-#define RESISTIEVE_BVH_PIN 34
+
+#define RESISTIEVE_BVH_PIN 34  // A0 is GPIO36, maar GPIO34 is betrouwbaarder voor analogRead
 #define CAPACITIEVE_BVH_PIN 39
 
 String categorieNaarString(VochtCategorie categorie) {
@@ -49,7 +55,6 @@ float tempGlobal = 0; // Globale temperatuur variabele
 float leesTemperatuur() {
   // TODO: Implementeer zodat de temperatuur op de juiste manier wordt ingelezen
   float temp = dht.readTemperature();
-
   return temp;
 }
 
@@ -168,6 +173,7 @@ void zetWaterpompUit() {
  * Het uitzetten van de waterpomp gebeurt niet hier maar in de loop() functie na controle of er voldoende tijd verstreken is.
  */
 void leesSensorenEnGeefWaterIndienNodig() {
+    Serial.println("Sensoren worden ingelezen..."); 
   // TODO: Implementeer inlezen met correcte pinnen
   int capacitieve_bvh_waarde = analogRead(CAPACITIEVE_BVH_PIN);
   int resistieve_bvh_waarde = analogRead(RESISTIEVE_BVH_PIN);
@@ -182,6 +188,8 @@ Serial.print("Capacitieve BVH: ");
 Serial.println(capacitieve_bvh_waarde);
 Serial.print("Resistieve BVH: ");
 Serial.println(resistieve_bvh_waarde);
+  Serial.print("Resistieve RAW: ");
+  Serial.println(analogRead(RESISTIEVE_BVH_PIN));
 
   // TODO: Beslis over water geven en pas de controles toe uit de flowchart.  
   // !! Gebruik enkel de constanten uit de configuratie om met een categorie te vergelijken!
@@ -197,12 +205,16 @@ void setup() {
 }
 
 void loop() {
-  // We hebben huidige millis nodig om de verschillende processen te controleren (water geven / stoppen)
-  long huidigeMillis = millis();
+  unsigned long huidigeMillis = millis();
   tempGlobal = leesTemperatuur();
+
   //DUMP(tempGlobal);
-  leesSensorenEnGeefWaterIndienNodig();
-  delay(1000); // Wacht even voor nieuwe meting
+
+  if (huidigeMillis - vorigeInleesMillis >= SENSOR_INLEES_INTERVAL) {
+    vorigeInleesMillis = huidigeMillis;
+    leesSensorenEnGeefWaterIndienNodig();
+  }
+
   // TODO: Controleer of de waterpomp uitgezet moet worden en roep functie zetWaterpompUit() aan indien nodig
 
   // TODO: Controleer of sensoren ingelezen moeten worden en roep functie leesSensorenEnGeefWaterIndienNodig() aan indien nodig
