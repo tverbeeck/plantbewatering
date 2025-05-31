@@ -35,6 +35,9 @@ DHT dht(DHTPIN, DHTTYPE);
 
 #define pompPin 25 // Pin voor de waterpomp relais
 
+#define PANIC_BUTTON_PIN 26  // dd 31/05 dit gekozen, maar nog aan te passen volgens de opstelling
+
+
 
 String categorieNaarString(VochtCategorie categorie) {
   switch (categorie) {
@@ -245,6 +248,8 @@ void setup() {
   // TODO: Implementeer de nodig code voor lezen sensoren (indien nodig)
 
   pinMode(pompPin, OUTPUT);
+  pinMode(PANIC_BUTTON_PIN, INPUT_PULLUP); // actieve LOW panic knop
+
   digitalWrite(pompPin, LOW); // Zet de waterpomp uit bij opstart
 
   Serial.begin(115200); // 9600 als baudrate lukt niet, want dan krijg ik rare tekens
@@ -252,7 +257,15 @@ void setup() {
 }
 
 void loop() {
-  // Gebruik unsigned long en lees de tijd aan het begin.
+  // PANIC BUTTON Check (active LOW)
+  if (digitalRead(PANIC_BUTTON_PIN) == LOW && statusWaterpomp == STATUS_POMP_UIT) {
+    Serial.println("PANIC BUTTON INGEDRUKT!");
+    zetWaterpompAan(WATER_GEEF_DUUR_PANIC);
+    delay(200); // debounce
+  }
+
+  // lees de tijd aan het begin via de standaard constructor millis()
+  // Dit is nodig om de tijd te kunnen vergelijken met de vorige inleestijd.
   unsigned long huidigeMillis = millis(); 
 
   // Als de pomp UIT is én het tijd is om sensoren te lezen
@@ -261,21 +274,15 @@ void loop() {
     leesSensorenEnGeefWaterIndienNodig();
   }
 
-  // --- Oplossing: Haal millis() opnieuw op voor de pomp check ---
+  // Haal millis() nu opnieuw op voor de pompcheck
   huidigeMillis = millis(); 
 
   // Controleer of de waterpomp uitgezet moet worden.
-  // We printen eerst de waarden om te debuggen (optioneel).
+  // We printen eerst de waarden om te debuggen.
   if (statusWaterpomp == StatusWaterpomp::STATUS_POMP_AAN) {
-
-    // Deze berekening zal nu meestal een klein positief getal geven.
-    // De berekening (unsigned long - unsigned long) werkt correct,
-    // ook bij rollover, zolang de duur korter is dan ~49 dagen.
-    Serial.println(huidigeMillis - startTijdWaterGeven);
-
     // De eigenlijke check om de pomp uit te zetten.
     if ((huidigeMillis - startTijdWaterGeven) >= duurTijdWaterGeven) {
-      zetWaterpompUit(); // Zet de waterpomp uit als de tijd verstreken is
+      zetWaterpompUit(); // Zet de waterpomp uit als de tijd (duurtTijdWaterGeven) verstreken is
     }
   }
 }
