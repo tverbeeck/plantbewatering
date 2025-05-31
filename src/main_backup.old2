@@ -210,11 +210,7 @@ void leesSensorenEnGeefWaterIndienNodig() {
   // TODO: Implementeer inlezen met correcte pinnen
   int capacitieve_bvh_waarde = analogRead(CAPACITIEVE_BVH_PIN);
   int resistieve_bvh_waarde = analogRead(RESISTIEVE_BVH_PIN);
-  float temperatuur = leesTemperatuur();
-
-  DUMP(capacitieve_bvh_waarde);
-  DUMP(resistieve_bvh_waarde);
-  DUMP(temperatuur);  
+  int temperatuur = leesTemperatuur();
 
   Serial.print("Temperatuur: ");
   Serial.println(temperatuur);
@@ -224,14 +220,10 @@ void leesSensorenEnGeefWaterIndienNodig() {
   VochtCategorie categorieResistieveBVH = berekenCategorieResistieveBVH(resistieve_bvh_waarde);
   VochtCategorie categorie = berekenSamengesteldeCategorie(categorieCapacitieveBVH, categorieResistieveBVH);
 
-  DUMP(categorieCapacitieveBVH);
-  DUMP(categorieResistieveBVH);
-  DUMP(categorie);
- 
-  Serial.print("Capacitieve BVH: ");
-  Serial.println(capacitieve_bvh_waarde);
-  Serial.print("Resistieve BVH: ");
-  Serial.println(resistieve_bvh_waarde);
+Serial.print("Capacitieve BVH: ");
+Serial.println(capacitieve_bvh_waarde);
+Serial.print("Resistieve BVH: ");
+Serial.println(resistieve_bvh_waarde);
 
   // TODO: Beslis over water geven en pas de controles toe uit de flowchart.  
   // !! Gebruik enkel de constanten uit de configuratie om met een categorie te vergelijken!
@@ -258,7 +250,7 @@ void setup() {
   pinMode(pompPin, OUTPUT);
   pinMode(PANIC_BUTTON_PIN, INPUT_PULLUP); // actieve LOW panic knop
 
-
+  digitalWrite(pompPin, LOW); // Zet de waterpomp uit bij opstart
 
   Serial.begin(115200); // 9600 als baudrate lukt niet, want dan krijg ik rare tekens
   dht.begin();

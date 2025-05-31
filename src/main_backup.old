@@ -1,0 +1,20 @@
+#include "Arduino.h"
+#include "config.h"
+#include <DHT.h>
+#include <Wire.h>
+#define ARDUINOTRACE_ENABLE 1 // Zet deze op 1 om debugging aan te zetten, op 0 om debugging uit te zetten
+#include <ArduinoTrace.h>
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(26, INPUT_PULLUP);  // panic-knop op GPIO26
+}
+
+void loop() {
+  if (digitalRead(26) == LOW) {
+    Serial.println("PANIC knop is NIET INGEDRUKT");
+  } else {
+    Serial.println("Panic knop is INGEDRUKT");
+  }
+  delay(500);
+} // Run met Ctrl + Alt + U hé ...
