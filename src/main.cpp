@@ -266,7 +266,7 @@ void setup() {
 
 void loop() {
   // PANIC BUTTON Check (active LOW)
-  if (digitalRead(PANIC_BUTTON_PIN) == LOW && statusWaterpomp == STATUS_POMP_UIT) {
+  if (digitalRead(PANIC_BUTTON_PIN) == HIGH && statusWaterpomp == STATUS_POMP_UIT) {
     Serial.println("PANIC BUTTON INGEDRUKT!");
     zetWaterpompAan(WATER_GEEF_DUUR_PANIC);
     delay(200); // debounce

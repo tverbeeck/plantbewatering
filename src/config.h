@@ -25,7 +25,7 @@ const unsigned long SENSOR_INLEES_INTERVAL = 15UL * 1000UL; // tijdelijk: 15s vo
 
 // TODO: Temperatuur schakelwaarden
 const float TEMPERATUUR_LAAG = 5.0;  // Onder deze temperatuur liever geen water
-const float TEMPERATUUR_HOOG = 25.0;  // Bij extreme hitte kunnen we extra irrigatie overwegen
+const float TEMPERATUUR_HOOG = 30.0;  // (Want kamertemperatuur op dit moment 25.4 °C)Bij extreme hitte kunnen we extra irrigatie overwegen
 // TODO: Categoriën vochtigheid
 enum VochtCategorie {
 	UITGEDROOGD = 0,
