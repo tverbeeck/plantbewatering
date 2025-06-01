@@ -4,6 +4,8 @@
  * https://elektronicavoorjou.nl/project/arduino-temp-luchtvochtigheid-dht22-iot-cloud/ 
  * https://lastminuteengineers.com/esp32-deep-sleep-wakeup-sources/ (1/6/2025)
  * https://randomnerdtutorials.com/esp32-external-wake-up-deep-sleep/ (1/6/2025)
+ * https://github.com/stm32duino/LIS2DW12 (1/6/2025)
+ * https://www.st.com/resource/en/datasheet/lis2dw12.pdf (1/6/2025)
  * erna ergens : 
  * Ook, waarom accelerometer (bv als plant wordt omver geduwd sat watertoevoer stopt)
  * Waarom DHT 22 gekozen
@@ -26,7 +28,11 @@ enum class WakeupReason {
 #include <Wire.h>
 #define ARDUINOTRACE_ENABLE 1 // Zet deze op 1 om debugging aan te zetten, op 0 om debugging uit te zetten
 #include <ArduinoTrace.h>
+#include <DFRobot_LIS2DW12.h>
 
+
+// Device ID for LIS2DW12 according to datasheet (0x44)
+#define LIS2DW12_DEVICE_ID 0x44
 
 // Enum voor status van de waterpomp (blijft hier gedefinieerd)
 enum StatusWaterpomp { STATUS_POMP_UIT, STATUS_POMP_AAN };
@@ -46,6 +52,26 @@ DHT dht(DHTPIN, DHTTYPE);
 #define pompPin 25 // Pin voor de waterpomp relais
 
 #define PANIC_BUTTON_PIN 26  // dd 31/05 dit gekozen, maar nog aan te passen volgens de opstelling
+#define I2C_SDA_PIN 21
+#define I2C_SCL_PIN 22
+
+// Maak een TwoWire instantie voor I2C communicatie
+TwoWire dev_i2c(0); // Gebruik I2C bus 0 op ESP32
+
+// Maak een LIS2DW12Sensor object
+DFRobot_LIS2DW12_I2C Accelero(&dev_i2c);
+
+// Drempelwaarde voor valdetectie op Y-as (in mg, experimenteer hiermee)
+// Een plotselinge daling naar bijna 0g kan een vrije val indiceren.
+// De waarde hangt af van de oriëntatie van de sensor.
+// Als Y-as verticaal omhoog wijst, is rust ~+1000mg. Tijdens val ~0mg.
+const int16_t FREEFALL_THRESHOLD_MG = 200; // Bijvoorbeeld, als Y-waarde onder 0.2g komt
+const unsigned long FREEFALL_DURATION_MS = 100; // Moet minstens X ms onder drempel zijn
+
+// Variabelen voor simpele valdetectie logica
+bool potentiallyFalling = false;
+unsigned long fallStartTime = 0;
+
 
 RTC_DATA_ATTR int bootCount = 0; /* Houdt het aantal herstarts bij */
 
@@ -60,6 +86,7 @@ String categorieNaarString(VochtCategorie categorie) {
 
 
 float tempGlobal = 0; // Globale temperatuur variabele
+DFRobot_LIS2DW12_I2C acce;
 
 // TODO: Variabelen om wachttijd tussen inlezen sensoren te kunnen regelen
 
@@ -216,7 +243,38 @@ void zetWaterpompUit() {
  * Het uitzetten van de waterpomp gebeurt niet hier maar in de loop() functie na controle of er voldoende tijd verstreken is.
  */
 void leesSensorenEnGeefWaterIndienNodig() {
-    Serial.println("Sensoren worden ingelezen..."); 
+  Serial.println("Sensoren worden ingelezen...");
+  float x, y, z;
+  Accelero.readAccX(); // x, y, z zijn nu in m/s²
+  Accelero.readAccY();
+  Accelero.readAccZ();
+
+    Serial.print("X: "); Serial.print(x); Serial.print(" m/s²\t");
+    Serial.print("Y: "); Serial.print(y); Serial.print(" m/s²\t");
+    Serial.print("Z: "); Serial.print(z); Serial.println(" m/s²");
+
+    // Je kunt nu je valdetectie direct op y (m/s²) doen, OF omzetten naar mg:
+    int y_mg = int(y / 9.81 * 1000); // m/s² -> mg, als je drempel in mg wilt aanhouden
+if (abs(y_mg) < FREEFALL_THRESHOLD_MG) {
+    if (!potentiallyFalling) {
+      potentiallyFalling = true;
+      fallStartTime = millis();
+      Serial.println("--- Potentiële start van val ---");
+    } else {
+      if (millis() - fallStartTime > FREEFALL_DURATION_MS) {
+        Serial.println("!!!!!!!!!!!!!!!! VAL GEDETECTEERD (Y-as) !!!!!!!!!!!!!!!!");
+        // Reset voor volgende detectie (of blokkeer voor een tijdje)
+        potentiallyFalling = false;
+        // Hier zou je een actie kunnen uitvoeren (alarm, bericht sturen, etc.)
+        delay(2000); // Wacht even om spam te voorkomen
+      }
+    }
+  } else {
+    if (potentiallyFalling) {
+      Serial.println("--- Potentiële val afgebroken ---");
+    }
+    potentiallyFalling = false;
+  }
   // TODO: Implementeer inlezen met correcte pinnen
   int capacitieve_bvh_waarde = analogRead(CAPACITIEVE_BVH_PIN);
   int resistieve_bvh_waarde = analogRead(RESISTIEVE_BVH_PIN);
@@ -291,8 +349,26 @@ WakeupReason print_wakeup_reason() {
 
 void setup() {
   // TODO: Implementeer de nodig code voor lezen sensoren (indien nodig)
+  Serial.begin(115200); // 9600 als baudrate lukt niet, want dan krijg ik rare tekens
+// Initialiseer I2C
+  dev_i2c.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
-  ++bootCount;
+  // Initialiseer de accelerometer
+  Accelero.begin(); // Dit probeert het standaard I2C adres
+
+  // Controleer of de sensor is gevonden
+  uint8_t id = Accelero.getID();
+  if (id != LIS2DW12_DEVICE_ID) {
+    Serial.println("LIS2DW12 niet gevonden! Controleer bedrading en I2C adres.");
+    while (1); // Stop uitvoering
+  }
+  Serial.println("LIS2DW12 gevonden!");
+
+  // Schakel de accelerometer in (de begin() functie activeert de meting)
+  // Indien nodig, stel bereik en powermode in:
+  // Accelero.setRange(DFRobot_LIS2DW12::RANGE_2G);
+  // Accelero.setPowerMode(DFRobot_LIS2DW12::HIGH_PERFORMANCE_MODE);
+    ++bootCount;
   Serial.println("Boot number: " + String(bootCount));
 
   esp_sleep_enable_ext0_wakeup((gpio_num_t)PANIC_BUTTON_PIN, 1);  // 1 = High, 0 = Low (zie https://randomnerdtutorials.com/esp32-external-wake-up-deep-sleep/)
@@ -310,7 +386,7 @@ void setup() {
   " Seconds");
 
 
-  Serial.begin(115200); // 9600 als baudrate lukt niet, want dan krijg ik rare tekens
+  
   dht.begin();
 }
 
