@@ -25,7 +25,7 @@ const unsigned long SENSOR_INLEES_INTERVAL = 15UL * 1000UL; // tijdelijk: 15s vo
 
 // TODO: Temperatuur schakelwaarden
 const float TEMPERATUUR_LAAG = 5.0;  // Onder deze temperatuur liever geen water
-const float TEMPERATUUR_HOOG = 30.0;  // (Want kamertemperatuur op dit moment 25.4 °C)Bij extreme hitte kunnen we extra irrigatie overwegen
+const float TEMPERATUUR_HOOG = 2.0;  // (Want kamertemperatuur op dit moment 25.4 °C)Bij extreme hitte kunnen we extra irrigatie overwegen
 // TODO: Categoriën vochtigheid
 enum VochtCategorie {
 	UITGEDROOGD = 0,
@@ -39,7 +39,6 @@ enum WaterPompStatus {
 };
 // TODO: Duurtijden water geven (in milliseconden)
 // Afhankelijk van hoe droog de plant is, geven we kort of lang water.
-const unsigned long WATER_GEEF_DUUR_KNOP	 = 3UL * 1000UL;   // 3 seconden
 const unsigned long WATER_GEEF_DUUR_LANG  = 5UL * 1000UL;  // 5 seconden
 const unsigned long WATER_GEEF_DUUR_NORMAAL = 2UL * 1000UL; // 2 seconden
 const unsigned long WATER_GEEF_DUUR_PANIC = 4000UL; // 4 seconden
