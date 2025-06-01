@@ -42,7 +42,9 @@ enum WaterPompStatus {
 const unsigned long WATER_GEEF_DUUR_LANG  = 5UL * 1000UL;  // 5 seconden
 const unsigned long WATER_GEEF_DUUR_NORMAAL = 2UL * 1000UL; // 2 seconden
 const unsigned long WATER_GEEF_DUUR_PANIC = 4000UL; // 4 seconden
-
+// deep sleep gerelateerde constanten
+const unsigned long uS_TO_S_FACTOR = 1000000;  /* Conversion factor for micro seconds to seconds */
+const unsigned long TIME_TO_SLEEP = 40;        /* Time ESP32 will go to sleep (in seconds) */
 
 // === Intervallen bodemvochtigheidssensor — RESISTIEF ===
 // Opgelet: bij resistieve sensor geldt :

@@ -38,10 +38,6 @@ DHT dht(DHTPIN, DHTTYPE);
 
 #define PANIC_BUTTON_PIN 26  // dd 31/05 dit gekozen, maar nog aan te passen volgens de opstelling
 
-/*deep sleep gerelateerde constanten nu */
-#define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  5        /* Time ESP32 will go to sleep (in seconds) */
-
 RTC_DATA_ATTR int bootCount = 0; /* Houdt het aantal herstarts bij */
 
 String categorieNaarString(VochtCategorie categorie) {
@@ -297,6 +293,8 @@ void setup() {
 }
 
 void loop() {
+  print_wakeup_reason(); // Print de reden waarom de ESP32 is wakker geworden
+  Serial.println("Loop gestart");
   // PANIC BUTTON Check (active LOW)
   if (digitalRead(PANIC_BUTTON_PIN) == HIGH && statusWaterpomp == STATUS_POMP_UIT) {
     Serial.println("PANIC BUTTON INGEDRUKT!");
@@ -308,14 +306,14 @@ void loop() {
   // Dit is nodig om de tijd te kunnen vergelijken met de vorige inleestijd.
   unsigned long huidigeMillis = millis(); 
 
-  // Als de pomp UIT is én het tijd is om sensoren te lezen
-  if (statusWaterpomp == StatusWaterpomp::STATUS_POMP_UIT && (huidigeMillis - vorigeInleesMillis >= SENSOR_INLEES_INTERVAL)) {
-    vorigeInleesMillis = huidigeMillis;
+  if (statusWaterpomp == StatusWaterpomp::STATUS_POMP_UIT) {
     leesSensorenEnGeefWaterIndienNodig();
-  }
+    DUMP("Sensoren zijn ingelezen, we gaan in deep sleep  : ");
 
-  // Haal millis() nu opnieuw op voor de pompcheck
-  huidigeMillis = millis(); 
+    Serial.flush();
+    esp_deep_sleep_start();
+    Serial.println("We zouden nu in deep sleep moeten gaan, maar dat lukt niet altijd. Dit is een bekend probleem bij de ESP32. Als ik deze lijn lees zitten we dus niet in deep sleep");
+  }
 
   // Controleer of de waterpomp uitgezet moet worden.
   // We printen eerst de waarden om te debuggen.
@@ -325,4 +323,5 @@ void loop() {
       zetWaterpompUit(); // Zet de waterpomp uit als de tijd (duurtTijdWaterGeven) verstreken is
     }
   }
+
 }
