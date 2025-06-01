@@ -2,6 +2,7 @@
  * Hier alle bronnen : 
  * https://www.instructables.com/How-to-use-DHT-22-sensor-Arduino-Tutorial/ 
  * https://elektronicavoorjou.nl/project/arduino-temp-luchtvochtigheid-dht22-iot-cloud/ 
+ * https://lastminuteengineers.com/esp32-deep-sleep-wakeup-sources/ (1/6/2025)
  * erna ergens : 
  * Ook, waarom accelerometer (bv als plant wordt omver geduwd sat watertoevoer stopt)
  * Waarom DHT 22 gekozen
@@ -37,7 +38,11 @@ DHT dht(DHTPIN, DHTTYPE);
 
 #define PANIC_BUTTON_PIN 26  // dd 31/05 dit gekozen, maar nog aan te passen volgens de opstelling
 
+/*deep sleep gerelateerde constanten nu */
+#define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP  5        /* Time ESP32 will go to sleep (in seconds) */
 
+RTC_DATA_ATTR int bootCount = 0; /* Houdt het aantal herstarts bij */
 
 String categorieNaarString(VochtCategorie categorie) {
   switch (categorie) {
@@ -248,16 +253,43 @@ void leesSensorenEnGeefWaterIndienNodig() {
       zetWaterpompAan(WATER_GEEF_DUUR_NORMAAL);
       Serial.print("Temperatuur is normaal, water wordt gegeven.");
     }
+  } 
+}
+
+/*
+Method to print the reason by which ESP32
+has been awaken from sleep
+*/
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break; /* Real Time Clock IO Control */
+    // case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break; /* Real Time Clock Control */
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
   }
-  
 }
 
 void setup() {
   // TODO: Implementeer de nodig code voor lezen sensoren (indien nodig)
 
+  ++bootCount;
+  Serial.println("Boot number: " + String(bootCount));
+
   pinMode(pompPin, OUTPUT);
   pinMode(PANIC_BUTTON_PIN, INPUT_PULLUP); // actieve LOW panic knop
 
+  /*
+    First we configure the wake up source
+    We set our ESP32 to wake up every 5 seconds
+  */
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+  Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
+  " Seconds");
 
 
   Serial.begin(115200); // 9600 als baudrate lukt niet, want dan krijg ik rare tekens
