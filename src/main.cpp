@@ -12,6 +12,14 @@
 
  // Opmerking voor mij : Ctrl + Alt + U kan ook om te herstarten
 
+ // =============== ENUM ivm WAKE UP ===============
+enum class WakeupReason {
+  BY_PANIC_BUTTON,
+  BY_TIMER,             // Voor het geval ik later timer wake-ups toevoeg
+  UNKNOWN_OR_POWER_ON   // Of een eerste start óf een onbekende wake-up
+};
+
+
 #include "Arduino.h"
 #include "config.h"
 #include <DHT.h>
@@ -257,19 +265,29 @@ void leesSensorenEnGeefWaterIndienNodig() {
 Method to print the reason by which ESP32
 has been awaken from sleep
 */
-void print_wakeup_reason(){
-  esp_sleep_wakeup_cause_t wakeup_reason;
 
-  wakeup_reason = esp_sleep_get_wakeup_cause();
 
-  switch(wakeup_reason)
-  {
-    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break; /* Real Time Clock IO Control */
-    // case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break; /* Real Time Clock Control */
-    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
-    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+// =============== FUNCTIE OM WAKE-UP REDEN TE BEPALEN (RETOURNEERT een ENUM) ===============
+WakeupReason print_wakeup_reason() {
+  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  // Log de rauwe oorzaak voor debuggen
+  Serial.print("Raw wakeup cause: ");
+  Serial.println(wakeup_reason);
+
+  switch (wakeup_reason) {
+    case ESP_SLEEP_WAKEUP_EXT0: // Wake-up door externe interrupt 0 (onze knop)
+      Serial.println("Wakeup identified: BY_PANIC_BUTTON (EXT0)");
+      return WakeupReason::BY_PANIC_BUTTON;
+    case ESP_SLEEP_WAKEUP_TIMER:
+      Serial.println("Wakeup identified: BY_TIMER");
+      return WakeupReason::BY_TIMER;
+    default:
+      Serial.println("Wakeup identified: UNKNOWN_OR_POWER_ON");
+      return WakeupReason::UNKNOWN_OR_POWER_ON;
   }
 }
+
 
 void setup() {
   // TODO: Implementeer de nodig code voor lezen sensoren (indien nodig)
@@ -298,6 +316,7 @@ void setup() {
 
 void loop() {
   print_wakeup_reason(); // Print de reden waarom de ESP32 is wakker geworden
+  // Als je de enum reden nodig hebt, kun je get_wakeup_reason() aanroepen
   Serial.println("Loop gestart");
   // PANIC BUTTON Check (active LOW)
   if (digitalRead(PANIC_BUTTON_PIN) == HIGH && statusWaterpomp == STATUS_POMP_UIT) {
