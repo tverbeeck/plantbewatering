@@ -3,6 +3,7 @@
  * https://www.instructables.com/How-to-use-DHT-22-sensor-Arduino-Tutorial/ 
  * https://elektronicavoorjou.nl/project/arduino-temp-luchtvochtigheid-dht22-iot-cloud/ 
  * https://lastminuteengineers.com/esp32-deep-sleep-wakeup-sources/ (1/6/2025)
+ * https://randomnerdtutorials.com/esp32-external-wake-up-deep-sleep/ (1/6/2025)
  * erna ergens : 
  * Ook, waarom accelerometer (bv als plant wordt omver geduwd sat watertoevoer stopt)
  * Waarom DHT 22 gekozen
@@ -276,8 +277,11 @@ void setup() {
   ++bootCount;
   Serial.println("Boot number: " + String(bootCount));
 
+  esp_sleep_enable_ext0_wakeup((gpio_num_t)PANIC_BUTTON_PIN, 1);  // 1 = High, 0 = Low (zie https://randomnerdtutorials.com/esp32-external-wake-up-deep-sleep/)
+  // hierboven de casting (gpio_num_t)omdat hij in deepsleep niet aan de code kan
+
+
   pinMode(pompPin, OUTPUT);
-  pinMode(PANIC_BUTTON_PIN, INPUT_PULLUP); // actieve LOW panic knop
 
   /*
     First we configure the wake up source
